@@ -13,10 +13,15 @@ import (
 )
 
 type game struct {
-	ID    int    `json:"id"`
-	Name  string `json:"name"`
-	Genre string `json:"genre"`
-	Price int    `json:"price"`
+	ID      int    `json:"id"`
+	Name    string `json:"name"`
+	GenreID int    `json:"genre_id"`
+	Price   int    `json:"price"`
+}
+
+type genre struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
 }
 
 var sqlGamesData []game
@@ -37,6 +42,8 @@ func main() {
 
 	// colon indicates a path parameter.
 	router.GET("/games/:id", getGamesById)
+
+	router.GET("/genres/", getGenres)
 	router.Run("localhost:8080")
 }
 
@@ -103,7 +110,7 @@ func postGames(c *gin.Context) {
 
 	id := 0
 
-	err := db.QueryRow(insertStatement, newGame.Name, newGame.Genre, newGame.Price).Scan(&id)
+	err := db.QueryRow(insertStatement, newGame.Name, newGame.Price, newGame.GenreID).Scan(&id)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -149,7 +156,7 @@ func listAllGamesData(db *sql.DB) []game {
 	for rows.Next() {
 		var newGame game
 
-		if err := rows.Scan(&newGame.ID, &newGame.Name, &newGame.Genre, &newGame.Price); err != nil {
+		if err := rows.Scan(&newGame.ID, &newGame.Name, &newGame.Price, &newGame.GenreID); err != nil {
 			log.Fatal(err)
 		}
 
@@ -163,4 +170,44 @@ func listAllGamesData(db *sql.DB) []game {
 	db.Close()
 
 	return dbGamesData
+}
+
+func getGenres(c *gin.Context) {
+	db := openSqlConnection()
+	defer db.Close()
+	allGenresData := listAllGenres(db)
+	c.IndentedJSON(http.StatusOK, allGenresData)
+
+}
+
+func listAllGenres(db *sql.DB) []genre {
+	listAllGenreQuery := "SELECT * FROM genres;"
+
+	rows, err := db.Query(listAllGenreQuery)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	defer rows.Close()
+
+	var allGenres []genre
+
+	for rows.Next() {
+		var currentGenre genre
+
+		err := rows.Scan(&currentGenre.ID, &currentGenre.Name)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		allGenres = append(allGenres, currentGenre)
+	}
+
+	if err := rows.Err(); err != nil {
+		log.Fatal(err)
+	}
+
+	db.Close()
+	return allGenres
 }
