@@ -6,7 +6,6 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
@@ -73,13 +72,31 @@ func getGames(c *gin.Context) {
 
 	name := c.Query("name")
 
+	// if name != "" {
+	// 	for _, game := range sqlGamesData {
+	// 		if strings.Contains(strings.ToLower(game.Name), strings.ToLower(name)) {
+	// 			c.IndentedJSON(http.StatusOK, game)
+	// 			return
+	// 		}
+	// 	}
+	// }
+
 	if name != "" {
-		for _, game := range sqlGamesData {
-			if strings.Contains(strings.ToLower(game.Name), strings.ToLower(name)) {
-				c.IndentedJSON(http.StatusOK, game)
-				return
-			}
+		var requestedGame game
+		getOneGameQuery := "SELECT * FROM games WHERE LOWER(name) LIKE '%' || LOWER($1) || '%';"
+		row := db.QueryRow(getOneGameQuery, name)
+		row.Scan(&requestedGame.ID, &requestedGame.Name, &requestedGame.Price, &requestedGame.GenreID)
+
+		if err := row.Err(); err != nil {
+			log.Fatal(err)
 		}
+
+		if requestedGame.Name != "" {
+			c.IndentedJSON(http.StatusOK, requestedGame)
+		} else {
+			c.IndentedJSON(http.StatusNotFound, gin.H{"message": "Object not found"})
+		}
+		return
 	}
 
 	c.IndentedJSON(http.StatusOK, sqlGamesData)
@@ -167,7 +184,7 @@ func listAllGamesData(db *sql.DB) []game {
 		log.Fatal(err)
 	}
 
-	db.Close()
+	// db.Close()
 
 	return dbGamesData
 }
