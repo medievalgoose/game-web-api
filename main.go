@@ -16,6 +16,7 @@ type game struct {
 	Name    string `json:"name"`
 	GenreID int    `json:"genre_id"`
 	Price   int    `json:"price"`
+	Genre   genre
 }
 
 type genre struct {
@@ -92,7 +93,8 @@ func getGames(c *gin.Context) {
 		}
 
 		if requestedGame.Name != "" {
-			c.IndentedJSON(http.StatusOK, requestedGame)
+			// c.IndentedJSON(http.StatusOK, requestedGame)
+			c.JSON(http.StatusOK, requestedGame)
 		} else {
 			c.IndentedJSON(http.StatusNotFound, gin.H{"message": "Object not found"})
 		}
@@ -117,7 +119,7 @@ func postGames(c *gin.Context) {
 
 	// SQL INSERT STATEMENT
 	insertStatement := `
-		INSERT INTO games (name, genre, price)
+		INSERT INTO games (name, price, genre_id)
 		VALUES ($1, $2, $3)
 		RETURNING id
 	`
@@ -159,9 +161,10 @@ func getGamesById(c *gin.Context) {
 }
 
 func listAllGamesData(db *sql.DB) []game {
-	selectionQuery := "SELECT * FROM games;"
+	// selectionQuery := "SELECT * FROM games;"
+	selectionQueryV2 := "SELECT g.id, g.name, price, g.genre_id, n.id, n.name AS \"genre\" FROM games g JOIN genres n ON g.genre_id = n.id; "
 
-	rows, err := db.Query(selectionQuery)
+	rows, err := db.Query(selectionQueryV2)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -173,7 +176,7 @@ func listAllGamesData(db *sql.DB) []game {
 	for rows.Next() {
 		var newGame game
 
-		if err := rows.Scan(&newGame.ID, &newGame.Name, &newGame.Price, &newGame.GenreID); err != nil {
+		if err := rows.Scan(&newGame.ID, &newGame.Name, &newGame.Price, &newGame.GenreID, &newGame.Genre.ID, &newGame.Genre.Name); err != nil {
 			log.Fatal(err)
 		}
 
