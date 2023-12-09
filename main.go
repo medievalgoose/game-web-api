@@ -37,13 +37,16 @@ const (
 
 func main() {
 	router := gin.Default()
+
+	// Game Routes
 	router.GET("/games", getGames)
 	router.POST("/games", postGames)
-
 	// colon indicates a path parameter.
 	router.GET("/games/:id", getGamesById)
 
+	// Genre Routes
 	router.GET("/genres/", getGenres)
+	router.POST("/genres/", postGenre)
 	router.Run("localhost:8080")
 }
 
@@ -230,4 +233,28 @@ func listAllGenres(db *sql.DB) []genre {
 
 	db.Close()
 	return allGenres
+}
+
+func postGenre(c *gin.Context) {
+	var newGenre genre
+
+	if err := c.BindJSON(&newGenre); err != nil {
+		log.Fatal(err)
+	}
+
+	insertGenreQuery := "INSERT INTO genres (name) VALUES ($1);"
+
+	db := openSqlConnection()
+
+	// res := 0
+	result, err := db.Exec(insertGenreQuery, newGenre.Name)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(result)
+	// fmt.Printf("Newly created genre ID: %v", res)
+
+	defer db.Close()
 }
