@@ -43,10 +43,12 @@ func main() {
 	router.POST("/games", postGames)
 	// colon indicates a path parameter.
 	router.GET("/games/:id", getGamesById)
+	router.PUT("/games/", updateGame)
 
 	// Genre Routes
 	router.GET("/genres/", getGenres)
 	router.POST("/genres/", postGenre)
+	router.PUT("/genres/", updateGenre)
 	router.Run("localhost:8080")
 }
 
@@ -139,6 +141,37 @@ func postGames(c *gin.Context) {
 
 	fmt.Printf("Newly created id: %v", id)
 
+}
+
+func updateGame(c *gin.Context) {
+	var updatedGame game
+
+	if err := c.BindJSON(&updatedGame); err != nil {
+		log.Fatal(err)
+	}
+
+	checkGameExistQuery := "SELECT id FROM games WHERE id = $1;"
+
+	db := openSqlConnection()
+	defer db.Close()
+
+	checkId := 0
+	err := db.QueryRow(checkGameExistQuery, updatedGame.ID).Scan(&checkId)
+
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Game not found"})
+		// log.Fatal(err)
+		return
+	}
+
+	updateGameQuery := "UPDATE games SET name = $1, price = $2, genre_id = $3 WHERE id = $4;"
+	_, err = db.Exec(updateGameQuery, updatedGame.Name, updatedGame.Price, updatedGame.GenreID, updatedGame.ID)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Game data updated"})
 }
 
 func getGamesById(c *gin.Context) {
@@ -255,6 +288,34 @@ func postGenre(c *gin.Context) {
 
 	fmt.Println(result)
 	// fmt.Printf("Newly created genre ID: %v", res)
+
+	defer db.Close()
+}
+
+func updateGenre(c *gin.Context) {
+	var updatedGenre genre
+
+	if err := c.BindJSON(&updatedGenre); err != nil {
+		log.Fatal(err)
+	}
+
+	checkGenreQuery := "SELECT id FROM genres WHERE id = $1;"
+	Id := 0
+
+	db := openSqlConnection()
+	err := db.QueryRow(checkGenreQuery, updatedGenre.ID).Scan(&Id)
+
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Genre not found"})
+		return
+	}
+
+	updateGenreQuery := "UPDATE genres SET name = $1 WHERE id = $2;"
+	_, err = db.Exec(updateGenreQuery, updatedGenre.Name, updatedGenre.ID)
+
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	defer db.Close()
 }
