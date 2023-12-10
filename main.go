@@ -58,6 +58,7 @@ func main() {
 
 	// Platform Routes
 	router.GET("/platforms/", getPlatforms)
+	router.DELETE("/platforms/:id/delete", deletePlatform)
 
 	router.Run("localhost:8080")
 }
@@ -386,4 +387,33 @@ func getPlatforms(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, allPlatforms)
+}
+
+func deletePlatform(c *gin.Context) {
+	platformId := c.Param("id")
+
+	db := openSqlConnection()
+	defer db.Close()
+
+	checkPlatformValidityQuery := "SELECT id FROM platforms WHERE id = $1;"
+	row := db.QueryRow(checkPlatformValidityQuery, platformId)
+
+	if err := row.Err(); err != nil {
+		log.Fatal(err)
+	}
+
+	deletePlatformQuery := "DELETE FROM platforms WHERE id = $1 RETURNING *;"
+	res := db.QueryRow(deletePlatformQuery, platformId)
+
+	if err := res.Err(); err != nil {
+		log.Fatal(err)
+	}
+
+	var deletedPlatformInfo platform
+
+	if err := res.Scan(&deletedPlatformInfo.ID, &deletedPlatformInfo.Name); err != nil {
+		log.Fatal(err)
+	}
+
+	c.JSON(http.StatusOK, deletedPlatformInfo)
 }
