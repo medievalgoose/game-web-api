@@ -24,6 +24,11 @@ type genre struct {
 	Name string `json:"name"`
 }
 
+type platform struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
+}
+
 var sqlGamesData []game
 
 // Const containing the database data.
@@ -47,8 +52,13 @@ func main() {
 
 	// Genre Routes
 	router.GET("/genres/", getGenres)
+	router.GET("/genres/:genreName", getListOfGamesByGenre)
 	router.POST("/genres/", postGenre)
 	router.PUT("/genres/", updateGenre)
+
+	// Platform Routes
+	router.GET("/platforms/", getPlatforms)
+
 	router.Run("localhost:8080")
 }
 
@@ -318,4 +328,62 @@ func updateGenre(c *gin.Context) {
 	}
 
 	defer db.Close()
+}
+
+func getListOfGamesByGenre(c *gin.Context) {
+	requestedGenre := c.Param("genreName")
+
+	var relevantGameList []game
+
+	db := openSqlConnection()
+	defer db.Close()
+
+	selectRelevantGamesQuery := "SELECT g.id, g.name, g.price, g.genre_id, gr.id, gr.name FROM games g JOIN genres gr ON g.genre_id = gr.id WHERE LOWER(gr.name) = LOWER($1);"
+	rows, err := db.Query(selectRelevantGamesQuery, requestedGenre)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for rows.Next() {
+		var relevantGame game
+
+		err := rows.Scan(&relevantGame.ID, &relevantGame.Name, &relevantGame.Price, &relevantGame.GenreID, &relevantGame.Genre.ID, &relevantGame.Genre.Name)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		relevantGameList = append(relevantGameList, relevantGame)
+	}
+
+	if err := rows.Err(); err != nil {
+		log.Fatal(err)
+	}
+
+	c.JSON(http.StatusOK, relevantGameList)
+}
+
+func getPlatforms(c *gin.Context) {
+	var allPlatforms []platform
+
+	db := openSqlConnection()
+	defer db.Close()
+
+	getAllPlatformsQuery := "SELECT * FROM platforms;"
+	rows, err := db.Query(getAllPlatformsQuery)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for rows.Next() {
+		var newPlatform platform
+
+		err := rows.Scan(&newPlatform.ID, &newPlatform.Name)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		allPlatforms = append(allPlatforms, newPlatform)
+	}
+
+	c.JSON(http.StatusOK, allPlatforms)
 }
