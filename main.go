@@ -49,19 +49,21 @@ func main() {
 	// colon indicates a path parameter.
 	router.GET("/games/:id", getGamesById)
 	router.PUT("/games/", updateGame)
+	router.DELETE("/games/:id/delete", deleteGame)
 
 	// Genre Routes
 	router.GET("/genres/", getGenres)
 	router.GET("/genres/:genreName", getListOfGamesByGenre)
 	router.POST("/genres/", postGenre)
 	router.PUT("/genres/", updateGenre)
+	router.DELETE("/genres/:id/delete", deleteGenre)
 
 	// Platform Routes
 	router.GET("/platforms/", getPlatforms)
-	router.DELETE("/platforms/:id/delete", deletePlatform)
 	router.GET("/platforms/:id/games", getGamesByPlatform)
 	router.POST("/platforms/", postPlatform)
 	router.PUT("/platforms/", updatePlatform)
+	router.DELETE("/platforms/:id/delete", deletePlatform)
 
 	router.Run("localhost:8080")
 }
@@ -242,6 +244,30 @@ func listAllGamesData(db *sql.DB) []game {
 	return dbGamesData
 }
 
+func deleteGame(c *gin.Context) {
+	gameId := c.Param("id")
+
+	db := openSqlConnection()
+	defer db.Close()
+
+	checkGameValidityQuery := "SELECT id FROM games WHERE id = $1;"
+	res := db.QueryRow(checkGameValidityQuery, gameId)
+	if err := res.Err(); err != nil {
+		log.Fatal(err)
+	}
+
+	deleteGameQuery := "DELETE FROM games WHERE id = $1 RETURNING *;"
+
+	var deletedGame game
+
+	err := db.QueryRow(deleteGameQuery, gameId).Scan(&deletedGame.ID, &deletedGame.Name, &deletedGame.Price, &deletedGame.GenreID)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	c.JSON(http.StatusOK, deletedGame)
+}
+
 func getGenres(c *gin.Context) {
 	db := openSqlConnection()
 	defer db.Close()
@@ -332,6 +358,28 @@ func updateGenre(c *gin.Context) {
 	}
 
 	defer db.Close()
+}
+
+func deleteGenre(c *gin.Context) {
+	genreId := c.Param("id")
+
+	db := openSqlConnection()
+	defer db.Close()
+
+	checkGenreValidityQuery := "SELECT id FROM genres WHERE id = $1;"
+	res := db.QueryRow(checkGenreValidityQuery, genreId)
+	if err := res.Err(); err != nil {
+		log.Fatal(err)
+	}
+
+	deleteGenreQuery := "DELETE FROM genres WHERE id = $1 RETURNING *;"
+	var deletedGenre genre
+	err := db.QueryRow(deleteGenreQuery, genreId).Scan(&deletedGenre.ID, &deletedGenre.Name)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	c.JSON(http.StatusOK, deletedGenre)
 }
 
 func getListOfGamesByGenre(c *gin.Context) {
