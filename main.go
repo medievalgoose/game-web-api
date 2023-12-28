@@ -42,28 +42,32 @@ func main() {
 	router := gin.Default()
 
 	// Game Routes
-	router.GET("/games", getGames)
-	router.POST("/games", postGames)
+	router.GET("/games", validateToken(), getGames)
+	router.POST("/games", validateToken(), postGames)
 	// colon indicates a path parameter.
-	router.GET("/games/:id", getGamesById)
-	router.PUT("/games/", updateGame)
-	router.DELETE("/games/:id/delete", deleteGame)
+	router.GET("/games/:id", validateToken(), getGamesById)
+	router.PUT("/games/", validateToken(), updateGame)
+	router.DELETE("/games/:id/delete", validateToken(), deleteGame)
 
 	// Genre Routes
-	router.GET("/genres/", getGenres)
-	router.GET("/genres/:genreName", getListOfGamesByGenre)
-	router.POST("/genres/", postGenre)
-	router.PUT("/genres/", updateGenre)
-	router.DELETE("/genres/:id/delete", deleteGenre)
+	router.GET("/genres/", validateToken(), getGenres)
+	router.GET("/genres/:genreName", validateToken(), getListOfGamesByGenre)
+	router.POST("/genres/", validateToken(), postGenre)
+	router.PUT("/genres/", validateToken(), updateGenre)
+	router.DELETE("/genres/:id/delete", validateToken(), deleteGenre)
 
 	// Platform Routes
-	router.GET("/platforms/", getPlatforms)
-	router.GET("/platforms/:id/games", getGamesByPlatform)
-	router.POST("/platforms/", postPlatform)
-	router.PUT("/platforms/", updatePlatform)
-	router.DELETE("/platforms/:id/delete", deletePlatform)
+	router.GET("/platforms/", validateToken(), getPlatforms)
+	router.GET("/platforms/:id/games", validateToken(), getGamesByPlatform)
+	router.POST("/platforms/", validateToken(), postPlatform)
+	router.PUT("/platforms/", validateToken(), updatePlatform)
+	router.DELETE("/platforms/:id/delete", validateToken(), deletePlatform)
+
+	// JWT
+	router.POST("/login/", validateLogin)
 
 	router.Run("localhost:8080")
+
 }
 
 func openSqlConnection() *sql.DB {
